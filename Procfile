@@ -1,1 +1,0 @@
-worker: python bot/discord_bot.py
