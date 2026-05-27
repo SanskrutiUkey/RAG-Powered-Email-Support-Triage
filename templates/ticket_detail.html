@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket Detail</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f6f8;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .ticket-id {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .grid {
+            display: flex;
+            gap: 20px;
+            height: 60vh;
+        }
+
+        .panel {
+            flex: 1;
+            background: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel h3 {
+            margin-top: 0;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .content-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 10px;
+        }
+
+        .actions {
+            margin-top: 70px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-send {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-reject {
+            background: #dc3545;
+            color: white;
+        }
+
+        .meta {
+            font-size: 13px;
+            color: #3e3b3b;
+            margin-bottom: 14px;
+            font-weight: bold;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="header">
+        <h2>Sender: {{ ticket.sender }}</h2>
+        <div class="meta">
+            <b>Subject:</b> {{ ticket.subject }} <br>
+            <b>Date:</b> {{ ticket.created_at.strftime('%d %b %Y, %I:%M %p') }}
+        </div>
+    </div>
+
+    <div class="grid">
+
+        <!-- LEFT: USER MESSAGE -->
+        <div class="panel">
+            <h3>User Message</h3>
+            <div class="content-box">
+                {{ ticket.text_body }}
+            </div>
+        </div>
+
+        <!-- RIGHT: AI RESPONSE -->
+        <div class="panel">
+            <h3>Generated Response</h3>
+
+            <form method="post" action="/admin/{{ ticket.id }}/action">
+                <textarea name="response">{{ ticket.ai_draft }}</textarea>
+
+                <div class="actions">
+                    <button type="submit" name="action" value="reject" class="btn btn-reject">
+                        Reject
+                    </button>
+
+                    <button type="submit" name="action" value="send" class="btn btn-send">
+                        Send
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>
