@@ -1,0 +1,4 @@
+app = "my-celery-worker"
+primary_region = "bom"
+[processes]
+worker = "celery -A app.celery_app worker --loglevel=info"

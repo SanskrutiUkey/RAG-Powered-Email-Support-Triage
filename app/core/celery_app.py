@@ -1,9 +1,10 @@
+import os 
 from celery import Celery
 
 celery = Celery(
-    "support_ai",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0"
+    "ai_processing",
+    broker=os.getenv("REDIS_URL"),
+    backend=os.getenv("REDIS_URL")
 )
 
 # Use solo pool on Windows to avoid billiard permission issues

@@ -15,6 +15,13 @@ docs = [
     "Users can reset passwords from the account settings page.",
     "Refunds are processed within 5 business days.",
     "Subscription cancellation is available from billing settings."
+    "Support tickets are typically responded to within 24 hours.",
+    "Two-factor authentication can be enabled for additional account security.",
+    "API keys can be generated and managed from the developer dashboard.",
+    "The free plan allows up to 100 requests per day.",
+    "Premium subscribers receive priority support and higher API limits.",
+    "Invoices can be downloaded from the billing history section.",
+    "Data exports are available in CSV and JSON formats."
 ]
 
 for content in docs:

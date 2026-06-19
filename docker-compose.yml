@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:latest
+    container_name: support-redis
+    ports:
+      - "6379:6379"
+
+  fastapi:
+    build: .
+    container_name: support-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  celery-ai:
+    build: .
+    container_name: celery-ai
+    command: celery -A app.core.celery_app worker -Q ai_processing --concurrency=4 --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  celery-email:
+    build: .
+    container_name: celery-email
+    command: celery -A app.core.celery_app worker -Q high_priority --concurrency=2 --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - redis

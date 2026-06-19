@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func, ForeignKey
 from app.db.session import Base
 from pgvector.sqlalchemy import Vector
 
@@ -16,6 +16,7 @@ class SupportTicket(Base):
     ai_draft = Column(Text, nullable=True)
     error_reason = Column(Text, nullable=True)
     raw_payload = Column(JSON, nullable=False)
+    assigned_to = Column(Integer,ForeignKey("users.id"),nullable=True)
     received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
@@ -27,3 +28,16 @@ class KnowledgeBase(Base):
     id = Column(Integer, primary_key=True)
     content = Column(Text)
     embedding = Column(Vector(768))
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False, default="agent")
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )

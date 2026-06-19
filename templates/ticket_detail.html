@@ -126,7 +126,7 @@
         <div class="panel">
             <h3>Generated Response</h3>
 
-            <form method="post" action="/admin/{{ ticket.id }}/action">
+            <form method="post" action="/dashboard/{{ ticket.id }}/action">
                 <textarea name="response">{{ ticket.ai_draft }}</textarea>
 
                 <div class="actions">

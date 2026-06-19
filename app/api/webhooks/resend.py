@@ -3,7 +3,7 @@ import os
 import requests
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
-from svix.webhooks import Webhook, WebhookVerificationError
+from svix.webhooks import Webhook
 from app.db.session import get_db
 from app.db.models import SupportTicket
 from app.core.tasks import process_support_email
@@ -39,14 +39,16 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
         wh = Webhook(webhook_secret)
         verified_payload = wh.verify(payload.decode("utf-8"), headers)
 
-        data = verified_payload if isinstance(verified_payload, dict) else json.loads(verified_payload)
+        if type(verified_payload) == dict:
+            data = verified_payload
+        else:
+            data = json.loads(verified_payload)
 
         email_id = data.get("data", {}).get("email_id") or request.headers.get("svix-id")
         sender = data.get("data", {}).get("from")
         subject = data.get("data", {}).get("subject")
 
-        # Fetch Text body & heml body from Resend API using email_id
-
+        # Fetch Text body & html body from Resend API using email_id
         text_body = None
         html_body = None
 
@@ -59,7 +61,7 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
                 timeout=10
             )
 
-            print("RESEND FETCH STATUS:", resend_response.status_code)
+            # print("RESEND FETCH STATUS:", resend_response.status_code)
 
             if resend_response.status_code == 200:
                 email_data = resend_response.json()
@@ -95,7 +97,10 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
             "processing"
         )
 
-        process_support_email.delay(job_data)
+        process_support_email.apply_async(
+            args=[job_data],
+            queue="ai_processing"
+        )
 
         redis_client.setex(
             f"webhook:{webhook_id}",

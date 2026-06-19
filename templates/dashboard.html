@@ -10,16 +10,32 @@
         <th>Subject</th>
         <th>Status</th>
         <th>Date</th>
+        <th>Assigned To</th>
     </tr>
 
     {% for ticket in tickets %}
-    <tr onclick="window.location='/admin/{{ticket.id}}'"
+    <tr onclick="window.location='/dashboard/{{ticket.id}}'"
         style="cursor:pointer;">
 
         <td>{{ticket.sender}}</td>
         <td>{{ticket.subject}}</td>
-        <td>{{ticket.processing_status}}</td>
-        <td>{{ticket.created_at}}</td>
+        <td>{% if ticket.processing_status == "failed" %}
+    <span style="color:red;">{{ ticket.processing_status }}</span>
+
+    <form method="post"
+          action="/dashboard/{{ ticket.id }}/retry"
+          style="display:inline;">
+        <button type="submit"
+                style="border:none;background:none;cursor:pointer;font-size:16px;"
+                title="Retry">
+            🔄
+        </button>
+    </form>
+{% else %}
+    {{ ticket.processing_status }}
+{% endif %}</td>
+        <td>{{ticket.created_at.strftime('%d %b %Y, %I:%M %p')}}</td>
+        <td>{{ ticket.assigned_to }}</td>
 
     </tr>
     {% endfor %}
