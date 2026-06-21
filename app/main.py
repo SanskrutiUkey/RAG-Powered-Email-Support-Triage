@@ -16,13 +16,12 @@ reranking_service = None
 async def lifespan(app: FastAPI):
     # Startup - do minimal loading
     print("API starting - models will load on first use")
+    Base.metadata.create_all(bind=engine)
     yield
     # Shutdown
     print("API shutting down")
 
 app = FastAPI(lifespan=lifespan)
-
-Base.metadata.create_all(bind=engine)
 
 app.include_router(resend_webhook_router)
 app.include_router(admin_router)
@@ -46,6 +45,25 @@ async def get_reranking_service():
         reranking_service = ReankingService()
     return reranking_service
 
+import sys
+from dotenv import load_dotenv
+load_dotenv()
+from fastapi import FastAPI
+print(f"Memory before imports: {__import__('psutil').Process().memory_info().rss / 1024 / 1024:.1f} MB")
+
+from contextlib import asynccontextmanager
+import os
+from app.db.session import engine, Base
+print(f"Memory after db imports: {__import__('psutil').Process().memory_info().rss / 1024 / 1024:.1f} MB")
+
+from app.api.webhooks.resend import router as resend_webhook_router
+print(f"Memory after webhook import: {__import__('psutil').Process().memory_info().rss / 1024 / 1024:.1f} MB")
+
+from app.api.admin.routes import router as admin_router
+print(f"Memory after admin import: {__import__('psutil').Process().memory_info().rss / 1024 / 1024:.1f} MB")
+
+from app.auth.routes import router as auth_router
+print(f"Memory after auth import: {__import__('psutil').Process().memory_info().rss / 1024 / 1024:.1f} MB")
 @app.get("/")
 def root():
     return {"message": "Side Hustle Ops Engine ✅"}
