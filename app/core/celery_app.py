@@ -1,6 +1,8 @@
 import os 
 from celery import Celery
+from dotenv import load_dotenv
 
+load_dotenv()
 celery = Celery(
     "ai_processing",
     broker=os.getenv("REDIS_URL"),
