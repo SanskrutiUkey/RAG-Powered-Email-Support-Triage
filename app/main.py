@@ -45,12 +45,6 @@ async def get_reranking_service():
         reranking_service = ReankingService()
     return reranking_service
 
-import sys
-from dotenv import load_dotenv
-load_dotenv()
-from fastapi import FastAPI
-print(f"Memory before imports: {__import__('psutil').Process().memory_info().rss / 1024 / 1024:.1f} MB")
-
 from contextlib import asynccontextmanager
 import os
 from app.db.session import engine, Base

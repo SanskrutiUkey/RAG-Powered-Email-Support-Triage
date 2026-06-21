@@ -9,7 +9,6 @@ from app.db.models import SupportTicket
 from app.db.session import SessionLocal
 from app.services.rag_service import retrieve_relevant_docs
 from app.services.email_service import send_support_reply
-from app.services.reranking_service import rerank_docs
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -48,6 +47,8 @@ def process_support_email(self, job_data):
         docs = retrieve_relevant_docs(db, email_embedding)
         docs = [row[0] for row in docs]
 
+        # Lazy import reranking service
+        from app.services.reranking_service import rerank_docs
         docs = rerank_docs(
             ticket.text_body,
             docs,

@@ -14,7 +14,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: celery -A app.core.celery_app.celery worker --loglevel=info
+    startCommand: celery -A app.core.celery_app.celery worker -Q ai_processing --loglevel=info
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
