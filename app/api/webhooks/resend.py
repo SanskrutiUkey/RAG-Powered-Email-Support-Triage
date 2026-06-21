@@ -61,7 +61,6 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
                 timeout=10
             )
 
-            # print("RESEND FETCH STATUS:", resend_response.status_code)
 
             if resend_response.status_code == 200:
                 email_data = resend_response.json()
