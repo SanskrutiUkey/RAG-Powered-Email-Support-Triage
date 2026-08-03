@@ -1,147 +1,211 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Ticket Detail</title>
+{% extends "base.html" %}
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background: #f5f6f8;
-        }
+{% block title %}Ticket #{{ ticket.id }} - Support Triage{% endblock %}
 
-        .container {
-            padding: 20px;
-        }
-
-        .header {
-            margin-bottom: 20px;
-        }
-
-        .ticket-id {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .grid {
-            display: flex;
-            gap: 20px;
-            height: 60vh;
-        }
-
-        .panel {
-            flex: 1;
-            background: #fff;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel h3 {
-            margin-top: 0;
-            font-size: 16px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
-        }
-
-        .content-box {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-
-        textarea {
-            width: 100%;
-            height: 100%;
-            border: none;
-            outline: none;
-            resize: none;
-            font-size: 14px;
-            line-height: 1.5;
-            padding: 10px;
-        }
-
-        .actions {
-            margin-top: 70px;
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-
-        .btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .btn-send {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-reject {
-            background: #dc3545;
-            color: white;
-        }
-
-        .meta {
-            font-size: 13px;
-            color: #3e3b3b;
-            margin-bottom: 14px;
-            font-weight: bold;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-    </style>
-</head>
-
-<body>
-<div class="container">
-
-    <div class="header">
-        <h2>Sender: {{ ticket.sender }}</h2>
-        <div class="meta">
-            <b>Subject:</b> {{ ticket.subject }} <br>
-            <b>Date:</b> {{ ticket.created_at.strftime('%d %b %Y, %I:%M %p') }}
+{% block body %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/dashboard" class="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        <span class="font-medium">Back to Dashboard</span>
+                    </a>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-medium text-purple-700">{{ current_user.email[0]|upper }}</span>
+                    </div>
+                    <form method="post" action="/auth/logout">
+                        <button type="submit" class="text-sm text-gray-500 hover:text-gray-700 font-medium">Logout</button>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="grid">
-
-        <!-- LEFT: USER MESSAGE -->
-        <div class="panel">
-            <h3>User Message</h3>
-            <div class="content-box">
-                {{ ticket.text_body }}
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-6">
+            <div class="flex items-center gap-3 mb-2">
+                <h1 class="text-2xl font-bold text-gray-900">Ticket #{{ ticket.id }}</h1>
+                <span id="status-badge" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
+                    {% if ticket.processing_status == 'failed' %}bg-red-100 text-red-700
+                    {% elif ticket.processing_status == 'draft_generated' %}bg-green-100 text-green-700
+                    {% elif ticket.processing_status == 'pending' %}bg-yellow-100 text-yellow-700
+                    {% elif ticket.processing_status == 'sent' %}bg-gray-100 text-gray-600
+                    {% elif ticket.processing_status == 'rejected' %}bg-orange-100 text-orange-700
+                    {% endif %}">
+                    {% if ticket.processing_status == 'failed' %}Failed
+                    {% elif ticket.processing_status == 'draft_generated' %}Draft Ready
+                    {% elif ticket.processing_status == 'pending' %}Pending
+                    {% elif ticket.processing_status == 'sent' %}Sent
+                    {% elif ticket.processing_status == 'rejected' %}Rejected
+                    {% endif %}
+                </span>
+            </div>
+            <div class="flex items-center gap-6 text-sm text-gray-600">
+                <span><strong class="text-gray-900">From:</strong> {{ ticket.sender }}</span>
+                <span><strong class="text-gray-900">Subject:</strong> {{ ticket.subject }}</span>
+                <span><strong class="text-gray-900">Date:</strong> {{ ticket.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
             </div>
         </div>
 
-        <!-- RIGHT: AI RESPONSE -->
-        <div class="panel">
-            <h3>Generated Response</h3>
-
-            <form method="post" action="/dashboard/{{ ticket.id }}/action">
-                <textarea name="response">{{ ticket.ai_draft }}</textarea>
-
-                <div class="actions">
-                    <button type="submit" name="action" value="reject" class="btn btn-reject">
-                        Reject
-                    </button>
-
-                    <button type="submit" name="action" value="send" class="btn btn-send">
-                        Send
-                    </button>
+        <!-- Error Banner -->
+        {% if ticket.processing_status == 'failed' and ticket.error_reason %}
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-semibold text-red-800">Error Reason</h3>
+                    <p class="text-sm text-red-700 mt-1">{{ ticket.error_reason }}</p>
                 </div>
-            </form>
+            </div>
         </div>
+        {% endif %}
 
+        <!-- Two-Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left: User Message -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        User Message
+                    </h2>
+                </div>
+                <div class="flex-1 p-5 overflow-y-auto max-h-[500px]">
+                    <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ ticket.text_body }}</p>
+                </div>
+            </div>
+
+            <!-- Right: AI Response -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        Generated Response
+                    </h2>
+                </div>
+
+                <form method="post" action="/dashboard/{{ ticket.id }}/action" class="flex-1 flex flex-col">
+                    <div class="flex-1 p-5">
+                        {% if ticket.processing_status == 'pending' %}
+                        <div id="processing-indicator" class="flex flex-col items-center justify-center h-64 gap-4">
+                            <div class="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                            <p class="text-sm text-gray-600">AI is drafting a response...</p>
+                        </div>
+                        <textarea
+                            id="ai-textarea"
+                            name="response"
+                            class="w-full h-64 p-4 text-sm text-gray-700 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none outline-none transition-all duration-200"
+                            placeholder="AI draft will appear here..."
+                            style="display:none;"
+                        >{{ ticket.ai_draft }}</textarea>
+                        {% else %}
+                        <textarea
+                            id="ai-textarea"
+                            name="response"
+                            class="w-full h-64 p-4 text-sm text-gray-700 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none outline-none transition-all duration-200"
+                            placeholder="AI draft will appear here..."
+                        >{{ ticket.ai_draft }}</textarea>
+                        {% endif %}
+                    </div>
+
+                    <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                        {% if ticket.processing_status == 'failed' %}
+                        </form>
+                        <form method="post" action="/dashboard/{{ ticket.id }}/retry">
+                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Retry
+                            </button>
+                        </form>
+                        <form method="post" action="/dashboard/{{ ticket.id }}/action" class="flex gap-3">
+                        {% endif %}
+
+                        <button type="submit" name="action" value="reject"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-red-300 text-red-700 hover:bg-red-50 text-sm font-medium rounded-lg transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            Reject
+                        </button>
+
+                        <button type="submit" name="action" value="send"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                            Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
-</body>
-</html>
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    var status = "{{ ticket.processing_status }}";
+    if (status !== "pending") return;
+
+    var ticketId = "{{ ticket.id }}";
+    var es = new EventSource("/dashboard/" + ticketId + "/stream");
+
+    es.addEventListener("status_update", function(e) {
+        var data = JSON.parse(e.data);
+
+        var badge = document.getElementById("status-badge");
+        if (badge && data.processing_status !== "pending") {
+            var colors = {
+                draft_generated: "bg-green-100 text-green-700",
+                failed: "bg-red-100 text-red-700",
+                sent: "bg-gray-100 text-gray-600"
+            };
+            badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium " + (colors[data.processing_status] || "");
+            var labels = {
+                draft_generated: "Draft Ready",
+                failed: "Failed",
+                sent: "Sent"
+            };
+            badge.textContent = labels[data.processing_status] || data.processing_status;
+        }
+
+        var textarea = document.getElementById("ai-textarea");
+        if (textarea && data.ai_draft) {
+            textarea.value = data.ai_draft;
+        }
+
+        var spinner = document.getElementById("processing-indicator");
+        if (spinner) spinner.style.display = "none";
+        if (textarea) textarea.style.display = "block";
+    });
+
+    es.addEventListener("done", function() {
+        es.close();
+        location.reload();
+    });
+
+    es.onerror = function() {
+        es.close();
+    };
+})();
+</script>
+{% endblock %}

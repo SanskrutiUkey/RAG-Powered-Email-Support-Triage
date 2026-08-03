@@ -1,6 +1,10 @@
 from dotenv import load_dotenv
 load_dotenv()
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 import os
 from app.db.session import engine, Base
@@ -22,6 +26,14 @@ async def lifespan(app: FastAPI):
     print("API shutting down")
 
 app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(StarletteHTTPException)
+async def auth_redirect_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 401:
+        return RedirectResponse(url="/", status_code=303)
+    return await http_exception_handler(request, exc)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(resend_webhook_router)
 app.include_router(admin_router)
@@ -46,8 +58,10 @@ async def get_reranking_service():
     return reranking_service
 
 @app.get("/")
-def root():
-    return {"message": "Side Hustle Ops Engine ✅"}
+def root(request: Request):
+    from fastapi.templating import Jinja2Templates
+    templates = Jinja2Templates(directory="templates")
+    return templates.TemplateResponse("login.html", {"request": request})
 
 @app.get("/health")
 def health():

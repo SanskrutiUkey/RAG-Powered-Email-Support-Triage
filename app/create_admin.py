@@ -2,6 +2,7 @@ from app.db.session import SessionLocal
 from app.db.models import User
 from passlib.context import CryptContext
 
+# deprecated="auto" means automatically treat old hashing schemes as outdated and upgrade them to the current scheme (bcrypt) when possible
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"

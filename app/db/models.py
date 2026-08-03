@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func
 from app.db.session import Base
 from pgvector.sqlalchemy import Vector
 
@@ -14,9 +14,9 @@ class SupportTicket(Base):
     html_body = Column(Text, nullable=True)
     processing_status = Column(String(50), nullable=False, default="pending")
     ai_draft = Column(Text, nullable=True)
+    final_response = Column(Text, nullable=True)
     error_reason = Column(Text, nullable=True)
     raw_payload = Column(JSON, nullable=False)
-    assigned_to = Column(Integer,ForeignKey("users.id"),nullable=True)
     received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())

@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 from app.services.reranking_service import rerank_docs
 
 
-@patch("app.services.rag_service.model")
+@patch("app.services.reranking_service.model")
 def test_rerank_docs_builds_query_doc_pairs(mock_model):
     docs = ["doc1", "doc2"]
 
@@ -18,7 +18,7 @@ def test_rerank_docs_builds_query_doc_pairs(mock_model):
     ])
 
 
-@patch("app.services.rag_service.model")
+@patch("app.services.reranking_service.model")
 def test_rerank_docs_sorts_by_score(mock_model):
     docs = ["A", "B", "C"]
 
@@ -38,7 +38,7 @@ def test_rerank_docs_sorts_by_score(mock_model):
     ]
 
 
-@patch("app.services.rag_service.model")
+@patch("app.services.reranking_service.model")
 def test_rerank_docs_returns_top_k(mock_model):
     docs = ["A", "B", "C"]
 
@@ -57,7 +57,7 @@ def test_rerank_docs_returns_top_k(mock_model):
         "A",
     ]
 
-@patch("app.services.rag_service.model")
+@patch("app.services.reranking_service.model")
 def test_rerank_docs_returns_only_docs(mock_model):
     docs = ["A"]
 

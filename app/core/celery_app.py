@@ -22,4 +22,4 @@ celery.conf.redis_backend_use_ssl = {
 # Use solo pool on Windows to avoid billiard permission issues
 celery.conf.worker_pool = "solo"
 
-celery.autodiscover_tasks(["app.core.tasks"])
+celery.autodiscover_tasks(["app.core"])

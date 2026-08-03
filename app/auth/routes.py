@@ -18,8 +18,8 @@ router = APIRouter(
 @router.get("/login")
 def login_page(request: Request):
     return templates.TemplateResponse(
-        "login.html",
-        { "request": request }
+        name="login.html",
+        request=request,
     )
 
 @router.post("/login")
@@ -85,6 +85,9 @@ def me(
 
 @router.post("/logout")
 def logout():
-    return {
-        "message": "Logout successful"
-    }
+    response = RedirectResponse(
+        url="/",
+        status_code=303
+    )
+    response.delete_cookie(key="access_token")
+    return response

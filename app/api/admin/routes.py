@@ -1,10 +1,12 @@
 import os
+import json
+import asyncio
 import logging
 from pathlib import Path
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.db.models import SupportTicket, User
 from fastapi.templating import Jinja2Templates
 from fastapi import Form
@@ -22,17 +24,11 @@ def admin_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Admin access required"
-        )
-    
     query = db.query(SupportTicket)
 
-    if status == "processed":
+    if status == "pending":
         query = query.filter(
-            SupportTicket.processing_status == "draft_generated"
+            SupportTicket.processing_status == "pending"
         )
 
     elif status == "failed":
@@ -40,28 +36,24 @@ def admin_dashboard(
             SupportTicket.processing_status == "failed"
         )
 
-    if current_user.role == "admin":
-        tickets = query.order_by(
-            SupportTicket.created_at.desc()
-        ).all()
+    tickets = query.order_by(
+        SupportTicket.created_at.desc()
+    ).all()
 
-    else:
-        tickets = (query.filter(SupportTicket.assigned_to == current_user.id).
-                   order_by(SupportTicket.created_at.desc()).all()
-    )
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "tickets": tickets,
-            "status": status
+            "status": status,
+            "current_user": current_user
         }
     )
 
 logger = logging.getLogger(__name__)
 
 @router.get("/{ticket_id}")
-def view_ticket(request: Request, ticket_id: int, db: Session = Depends(get_db)):
+def view_ticket(request: Request, ticket_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
 
     ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
     if not ticket:
@@ -72,7 +64,8 @@ def view_ticket(request: Request, ticket_id: int, db: Session = Depends(get_db))
         "ticket_detail.html",
         {
             "request": request,
-            "ticket": ticket
+            "ticket": ticket,
+            "current_user": current_user
         }
     )
 
@@ -89,11 +82,6 @@ def ticket_action(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    if (current_user.role != "admin"  and ticket.assigned_to != current_user.id):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized"
-        )
     if action == "send":
         if not response:
             raise HTTPException(status_code=400, detail="Response required")
@@ -117,9 +105,9 @@ def ticket_action(
 @router.post("/{ticket_id}/retry")
 def retry_ticket(
     ticket_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
-
     ticket = (
         db.query(SupportTicket)
         .filter(SupportTicket.id == ticket_id)
@@ -129,15 +117,59 @@ def retry_ticket(
     if not ticket:
         raise HTTPException(404)
 
-    process_support_email.delay( 
-        {
-            "ticket_id": ticket.id,
-            "email_id": ticket.email_id
+    try:
+        process_support_email.apply_async(
+            args=[{
+                "ticket_id": ticket.id,
+                "email_id": ticket.email_id,
+                "error_reason": ticket.error_reason
+            }],
+            queue="ai_processing"
+        )
+        ticket.processing_status = "pending"
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Retry dispatch failed: {e}")
+        raise HTTPException(status_code=503, detail="Task queue unavailable")
+
+    return RedirectResponse(url=f"/dashboard/{ticket_id}", status_code=303)
+
+@router.get("/{ticket_id}/stream")
+async def ticket_stream(
+    ticket_id: int,
+    current_user: User = Depends(require_admin)
+):
+    async def event_generator():
+        db = SessionLocal()
+        try:
+            ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+            if not ticket:
+                return
+
+            while True:
+                data = {
+                    "processing_status": ticket.processing_status,
+                    "ai_draft": ticket.ai_draft or "",
+                    "error_reason": ticket.error_reason or "",
+                }
+                yield f"event: status_update\ndata: {json.dumps(data)}\n\n"
+
+                if ticket.processing_status in ("draft_generated", "failed", "sent", "rejected"):
+                    yield f"event: done\ndata: {json.dumps({'status': ticket.processing_status})}\n\n"
+                    break
+
+                await asyncio.sleep(15)
+                db.refresh(ticket)
+        finally:
+            db.close()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         }
     )
-    ticket.processing_status = "pending"
-    ticket.error_reason = None
-
-    db.commit()
-
-    return {"message": "Retry queued"}

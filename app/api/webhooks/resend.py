@@ -1,5 +1,6 @@
 import json
 import os
+import asyncio
 import requests
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -27,8 +28,11 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Missing svix headers")
 
         webhook_id = request.headers.get("svix-id")
-        existing = redis_client.get(f"webhook:{webhook_id}")
 
+        def _check_dedup():
+            return redis_client.get(f"webhook:{webhook_id}")
+
+        existing = await asyncio.to_thread(_check_dedup)
         if existing:
             return {"ok": True, "duplicate": True}
 
@@ -44,9 +48,13 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
         else:
             data = json.loads(verified_payload)
 
-        email_id = data.get("data", {}).get("email_id") or request.headers.get("svix-id")
-        sender = data.get("data", {}).get("from")
-        subject = data.get("data", {}).get("subject")
+        payload_data = data.get("data")
+        if payload_data is None:
+            raise HTTPException(status_code=400, detail="Invalid webhook payload")
+
+        email_id = payload_data.get("email_id")
+        sender = payload_data.get("from")
+        subject = payload_data.get("subject")
 
         # Fetch Text body & html body from Resend API using email_id
         text_body = None
@@ -90,21 +98,18 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
             "text_body": text_body,
         }
 
-        redis_client.setex(
-            f"webhook:{webhook_id}",
-            86400,
-            "processing"
-        )
+        def _set_dedup():
+            redis_client.setex(
+                f"webhook:{webhook_id}",
+                86400,
+                "processed"
+            )
+
+        await asyncio.to_thread(_set_dedup)
 
         process_support_email.apply_async(
             args=[job_data],
             queue="ai_processing"
-        )
-
-        redis_client.setex(
-            f"webhook:{webhook_id}",
-            86400,
-            "processed"
         )
 
         return {"ok": True, "ticket_id": ticket.id}

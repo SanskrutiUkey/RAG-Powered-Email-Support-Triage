@@ -1,42 +1,132 @@
-<div style="display:flex; gap:20px; margin-bottom:6px; margin-left:10px;">
+{% extends "base.html" %}
 
-    <h2>All Tickets</h2>
+{% block title %}Dashboard - Support Triage{% endblock %}
 
+{% block body %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <span class="ml-2 text-xl font-bold text-gray-900">Support Triage</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">{{ current_user.email }}</span>
+                    <form method="post" action="/auth/logout">
+                        <button type="submit" class="text-sm text-gray-500 hover:text-gray-700 font-medium">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Tickets</h1>
+
+            <!-- Filter Pills -->
+            <div class="flex gap-2">
+                <a href="/dashboard?status=all"
+                   class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
+                          {% if status == 'all' %}bg-purple-600 text-white{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+                    All
+                </a>
+                <a href="/dashboard?status=pending"
+                   class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
+                          {% if status == 'pending' %}bg-yellow-600 text-white{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+                    Pending
+                </a>
+                <a href="/dashboard?status=failed"
+                   class="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
+                          {% if status == 'failed' %}bg-red-600 text-white{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+                    Failed
+                </a>
+            </div>
+        </div>
+
+        <!-- Tickets Table -->
+        {% if tickets %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sender</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subject</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for ticket in tickets %}
+                    <tr onclick="window.location='/dashboard/{{ ticket.id }}'"
+                        class="hover:bg-gray-50 cursor-pointer transition-colors duration-150">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">{{ ticket.sender }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-600">{{ ticket.subject }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if ticket.processing_status == 'failed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                Failed
+                            </span>
+                            <form method="post" action="/dashboard/{{ ticket.id }}/retry" class="inline-block ml-2" onclick="event.stopPropagation()">
+                                <button type="submit" class="text-gray-400 hover:text-yellow-500 transition-colors" title="Retry">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                </button>
+                            </form>
+                            {% elif ticket.processing_status == 'draft_generated' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                Draft Ready
+                            </span>
+                            {% elif ticket.processing_status == 'pending' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                Pending
+                            </span>
+                            {% elif ticket.processing_status == 'sent' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                Sent
+                            </span>
+                            {% elif ticket.processing_status == 'rejected' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                                Rejected
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                {{ ticket.processing_status }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ ticket.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900 mb-1">No tickets found</h3>
+            <p class="text-gray-500">No tickets match the current filter.</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
-
-<table border="1" cellpadding="10">
-    <tr>
-        <th>Sender</th>
-        <th>Subject</th>
-        <th>Status</th>
-        <th>Date</th>
-        <th>Assigned To</th>
-    </tr>
-
-    {% for ticket in tickets %}
-    <tr onclick="window.location='/dashboard/{{ticket.id}}'"
-        style="cursor:pointer;">
-
-        <td>{{ticket.sender}}</td>
-        <td>{{ticket.subject}}</td>
-        <td>{% if ticket.processing_status == "failed" %}
-    <span style="color:red;">{{ ticket.processing_status }}</span>
-
-    <form method="post"
-          action="/dashboard/{{ ticket.id }}/retry"
-          style="display:inline;">
-        <button type="submit"
-                style="border:none;background:none;cursor:pointer;font-size:16px;"
-                title="Retry">
-            🔄
-        </button>
-    </form>
-{% else %}
-    {{ ticket.processing_status }}
-{% endif %}</td>
-        <td>{{ticket.created_at.strftime('%d %b %Y, %I:%M %p')}}</td>
-        <td>{{ ticket.assigned_to }}</td>
-
-    </tr>
-    {% endfor %}
-</table>
+{% endblock %}

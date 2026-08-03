@@ -57,20 +57,28 @@ def process_support_email(self, job_data):
 
         retrieved_context = "\n".join(docs)
 
-        # Final grounded prompt
+        error_context = job_data.get("error_reason", "")
+        error_section = ""
+        if error_context:
+            error_section = f"\nPrevious Error (avoid this):\n{error_context}\n"
+
         prompt = f"""
         Customer Email:
         {ticket.text_body}
 
         Knowledge Base Context:
         {retrieved_context}
-
+        {error_section}
         Generate a professional support reply.
         """
 
         response = client.chat.completions.create(
             model="gemini-2.5-pro",
             messages=[
+                {
+                    "role": "system",
+                    "content": "You are a customer support agent. Output ONLY the reply text to send to the customer. No preamble, no meta-commentary, no markdown formatting, no subject line. Just the plain email body."
+                },
                 {
                     "role": "user",
                     "content": prompt
@@ -82,7 +90,8 @@ def process_support_email(self, job_data):
 
         if ai_reply:
             ticket.ai_draft = ai_reply
-            ticket.processing_status = "draft_generated" 
+            ticket.processing_status = "draft_generated"
+            ticket.error_reason = None
 
             logger.info(f"EMAIL_PROCESSED ticket_id={ticket_id}")
         else:
